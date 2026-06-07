@@ -25,18 +25,18 @@ It is designed for tools such as Codex, Claude, OpenCode, and other command line
 
 ```text
 .
-├── src/
-│   ├── AITerminalLauncher.App/      # WinForms tray application
-│   ├── AITerminalLauncher.Core/     # Configuration, validation, launch, hotkey, tray logic
-│   └── AITerminalLauncher.psm1      # PowerShell backend module
-├── tests/
-│   ├── AITerminalLauncher.Core.Tests/
-│   └── run-tests.ps1
-├── install.ps1                      # Install Explorer context menu
-├── uninstall.ps1                    # Remove Explorer context menu
-├── launcher.ps1                     # Tool launch script
-├── publish.ps1                      # Self-contained publish script
-└── config.json                      # Default config template
+|-- src/
+|   |-- AITerminalLauncher.App/      # WinForms tray application
+|   |-- AITerminalLauncher.Core/     # Configuration, validation, launch, hotkey, tray logic
+|   `-- AITerminalLauncher.psm1      # PowerShell backend module
+|-- tests/
+|   |-- AITerminalLauncher.Core.Tests/
+|   `-- run-tests.ps1
+|-- install.ps1                      # Install Explorer context menu
+|-- uninstall.ps1                    # Remove Explorer context menu
+|-- launcher.ps1                     # Tool launch script
+|-- publish.ps1                      # Self-contained publish script
+`-- config.json                      # Default config template
 ```
 
 ## Requirements
@@ -206,3 +206,196 @@ Add the command to `PATH`, or configure the tool with a full executable path.
 ### Windows Terminal is unavailable
 
 Change the preferred terminal to `powershell`, or install Windows Terminal and keep using `wt`.
+
+---
+
+# AI Terminal Launcher 中文说明
+
+AI Terminal Launcher 是一个 Windows 托盘程序，用来从资源管理器目录、托盘菜单或全局快捷键快速启动 AI 命令行工具。
+
+它适合把 Codex、Claude、OpenCode 等 CLI 工具配置成固定入口。程序会识别当前资源管理器目录，在该目录打开终端，并运行对应命令。
+
+## 主要功能
+
+- Windows 托盘常驻，双击托盘图标打开设置窗口。
+- 可配置多个 CLI 工具，包括显示名称、命令、参数、快捷键和显示位置。
+- 支持全局快捷键，包括单键快捷键和组合键。
+- 自定义快捷键按键支持直接捕获用户输入，不再只能从下拉框选择。
+- 支持资源管理器目录识别：
+  - 选中文件夹时优先使用选中的文件夹；
+  - 选中文件时使用当前资源管理器目录；
+  - 没有资源管理器上下文时弹出文件夹选择器。
+- 连续按多个快捷键时，会短时间复用上次目录，避免新终端抢焦点后下一个快捷键失效。
+- 支持托盘菜单入口。
+- 支持安装和移除资源管理器右键菜单。
+- 支持开机启动。
+- 支持选择首选终端，并在不可用时回退到 PowerShell。
+- 支持发布为 Windows 自包含单文件程序。
+
+## 目录结构
+
+```text
+.
+|-- src/
+|   |-- AITerminalLauncher.App/      # WinForms 托盘程序和设置界面
+|   |-- AITerminalLauncher.Core/     # 配置、验证、启动、快捷键、托盘逻辑
+|   `-- AITerminalLauncher.psm1      # PowerShell 后端模块
+|-- tests/
+|   |-- AITerminalLauncher.Core.Tests/
+|   `-- run-tests.ps1
+|-- install.ps1                      # 安装资源管理器右键菜单
+|-- uninstall.ps1                    # 移除资源管理器右键菜单
+|-- launcher.ps1                     # 工具启动脚本
+|-- publish.ps1                      # 自包含发布脚本
+`-- config.json                      # 默认配置模板
+```
+
+## 运行要求
+
+- Windows
+- Windows PowerShell 5.1 或更高版本
+- 从源码构建需要 .NET 8 SDK
+- 目标 CLI 命令需要在 `PATH` 中，或者在设置里填写完整可执行文件路径
+- 如果首选终端选择 `wt`，需要安装 Windows Terminal
+
+发布后的自包含 exe 不要求目标机器预装 .NET 运行时。
+
+## 构建
+
+```powershell
+dotnet build .\AITerminalLauncher.sln
+```
+
+## 测试
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tests\run-tests.ps1
+```
+
+## 发布
+
+发布 Windows x64 自包含包：
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\publish.ps1
+```
+
+发布目录：
+
+```text
+dist\AITerminalLauncher\
+```
+
+分发时需要保留整个目录结构，包括：
+
+- `AITerminalLauncher.App.exe`
+- `launcher.ps1`
+- `install.ps1`
+- `uninstall.ps1`
+- `src\AITerminalLauncher.psm1`
+
+## 使用方式
+
+打开设置窗口：
+
+```powershell
+.\dist\AITerminalLauncher\AITerminalLauncher.App.exe
+```
+
+只启动托盘：
+
+```powershell
+.\dist\AITerminalLauncher\AITerminalLauncher.App.exe --tray
+```
+
+开发时运行：
+
+```powershell
+dotnet run --project .\src\AITerminalLauncher.App\AITerminalLauncher.App.csproj
+```
+
+## 配置文件
+
+用户配置文件位置：
+
+```text
+%LocalAppData%\AITerminalLauncher\config.json
+```
+
+仓库根目录的 `config.json` 是默认配置模板。
+
+## 快捷键
+
+每个启用的工具都可以设置一个全局快捷键。
+
+支持的按键包括：
+
+- `A-Z`
+- `0-9`
+- `F1-F24`
+- `NUMPAD0-NUMPAD9`
+- 方向键
+- `Home`、`End`
+- `PageUp`、`PageDown`
+- `Insert`、`Delete`
+- `Space`、`Tab`、`Esc`、`Enter`、`Backspace`
+- 常用符号键
+
+编辑工具时，点击“按键输入”控件，然后直接按目标键或组合键。例如按下 `Ctrl+C`，会捕获 `C` 并自动勾选 `Ctrl`。
+
+## 资源管理器右键菜单
+
+安装右键菜单：
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\install.ps1 -ConfigPath "$env:LOCALAPPDATA\AITerminalLauncher\config.json"
+```
+
+预览注册表改动：
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\install.ps1 -ConfigPath "$env:LOCALAPPDATA\AITerminalLauncher\config.json" -DryRun
+```
+
+移除右键菜单：
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\uninstall.ps1 -ConfigPath "$env:LOCALAPPDATA\AITerminalLauncher\config.json"
+```
+
+托盘菜单里也提供安装和移除右键菜单的入口。
+
+## 日志
+
+日志目录：
+
+```text
+%LocalAppData%\AITerminalLauncher\logs\
+```
+
+如果启动失败、快捷键注册失败或工具启动失败，可以先查看这里。
+
+## 常见问题
+
+### 快捷键注册失败
+
+可能是快捷键已经被其他程序占用。修改快捷键后保存设置即可。
+
+### 启动目录不对
+
+程序选择目录的优先级如下：
+
+1. 当前资源管理器窗口中选中的文件夹；
+2. 当前资源管理器窗口所在目录；
+3. 连续快捷键启动时短时间复用上一次目录；
+4. 弹出文件夹选择器。
+
+如果资源管理器不在前台，并且短时间复用窗口已经过期，程序不会一直使用旧目录。
+
+### CLI 命令找不到
+
+把命令加入 `PATH`，或者在设置里填写完整可执行文件路径。
+
+### Windows Terminal 不可用
+
+把首选终端改成 `powershell`，或者安装 Windows Terminal 后继续使用 `wt`。
