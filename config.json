@@ -1,0 +1,67 @@
+{
+  "version": 1,
+  "terminal": {
+    "preferred": "wt",
+    "fallback": "powershell"
+  },
+  "startup": {
+    "launchAtLogin": false,
+    "startMinimizedToTray": true
+  },
+  "fallbackBehavior": {
+    "mode": "folderPicker"
+  },
+  "tools": [
+    {
+      "id": "codex",
+      "displayName": "Codex",
+      "command": "codex",
+      "args": [],
+      "enabled": true,
+      "showInContextMenu": true,
+      "showInTrayMenu": true,
+      "hotkey": {
+        "enabled": true,
+        "modifiers": [
+          "Control",
+          "Alt"
+        ],
+        "key": "C"
+      }
+    },
+    {
+      "id": "claude",
+      "displayName": "Claude",
+      "command": "claude",
+      "args": [],
+      "enabled": true,
+      "showInContextMenu": true,
+      "showInTrayMenu": true,
+      "hotkey": {
+        "enabled": true,
+        "modifiers": [
+          "Control",
+          "Alt"
+        ],
+        "key": "L"
+      }
+    },
+    {
+      "id": "opencode",
+      "displayName": "OpenCode",
+      "command": "opencode",
+      "args": [],
+      "enabled": true,
+      "showInContextMenu": true,
+      "showInTrayMenu": true,
+      "hotkey": {
+        "enabled": true,
+        "modifiers": [
+          "Control",
+          "Alt"
+        ],
+        "key": "O"
+      }
+    }
+  ]
+}

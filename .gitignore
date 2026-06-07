@@ -1,0 +1,29 @@
+# Build outputs
+bin/
+obj/
+**/bin/
+**/obj/
+
+# Published packages and local checkpoints
+dist/
+archives/
+
+# Local IDE / agent state
+.vs/
+.vscode/
+.idea/
+.claude/
+.agents/
+.codex/
+
+# Logs and temporary files
+*.log
+*.tmp
+tmp-*
+
+# OS noise
+Thumbs.db
+Desktop.ini
+
+# User-local runtime config should not be committed from AppData copies.
+*.user
