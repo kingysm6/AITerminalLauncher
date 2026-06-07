@@ -1,83 +1,91 @@
 # AI Terminal Launcher
 
-AI Terminal Launcher 是一个 Windows 托盘工具，用来从资源管理器、托盘菜单或全局快捷键快速启动 AI CLI 工具。
+AI Terminal Launcher is a Windows tray application for launching AI CLI tools from Explorer context, tray menu entries, or global hotkeys.
 
-它适合把 Codex、Claude、OpenCode 等命令行工具固定成可配置的启动入口，并自动把当前资源管理器目录作为终端工作目录。
+It is designed for tools such as Codex, Claude, OpenCode, and other command line assistants. The app detects the active Explorer folder, opens the configured terminal there, and runs the selected CLI command.
 
-## 功能
+## Features
 
-- 托盘常驻，双击打开设置窗口。
-- 支持自定义 CLI 工具：名称、命令、参数、显示位置。
-- 支持全局快捷键，可以直接捕获用户按下的键。
-- 支持单键快捷键，也支持 Ctrl / Alt / Shift / Win 组合键。
-- 支持启动 Codex、Claude、OpenCode 等任意 PATH 中的命令。
-- 支持资源管理器右键菜单安装和移除。
-- 支持开机启动。
-- 支持 Windows Terminal (`wt`) 和 PowerShell 回退。
-- 当连续按多个快捷键时，会短时间复用上一次识别到的目录，避免新终端抢焦点后后续快捷键失效。
+- Windows tray app with a settings window.
+- Configurable CLI tools: display name, command, arguments, visibility, and hotkey.
+- Global hotkeys, including single-key hotkeys and modifier combinations.
+- Direct key capture for custom hotkey setup instead of a dropdown-only picker.
+- Explorer folder detection:
+  - selected folder wins;
+  - selected file falls back to the current folder;
+  - missing Explorer context falls back to folder picker.
+- Short reuse window for consecutive hotkey launches, so a newly opened terminal does not break the next hotkey immediately.
+- Optional tray menu entries.
+- Optional Explorer context menu integration.
+- Optional launch at login.
+- Preferred terminal selection with PowerShell fallback.
+- Self-contained single-file publish for Windows.
 
-## 项目结构
+## Repository Layout
 
 ```text
 .
 ├── src/
-│   ├── AITerminalLauncher.App/      # WinForms 托盘程序和设置界面
-│   ├── AITerminalLauncher.Core/     # 配置、快捷键、启动请求等核心逻辑
-│   └── AITerminalLauncher.psm1      # PowerShell 模块
+│   ├── AITerminalLauncher.App/      # WinForms tray application
+│   ├── AITerminalLauncher.Core/     # Configuration, validation, launch, hotkey, tray logic
+│   └── AITerminalLauncher.psm1      # PowerShell backend module
 ├── tests/
 │   ├── AITerminalLauncher.Core.Tests/
 │   └── run-tests.ps1
-├── install.ps1                      # 安装资源管理器右键菜单
-├── uninstall.ps1                    # 移除资源管理器右键菜单
-├── launcher.ps1                     # CLI 启动脚本
-├── publish.ps1                      # 单文件发布脚本
-└── config.json                      # 默认配置模板
+├── install.ps1                      # Install Explorer context menu
+├── uninstall.ps1                    # Remove Explorer context menu
+├── launcher.ps1                     # Tool launch script
+├── publish.ps1                      # Self-contained publish script
+└── config.json                      # Default config template
 ```
 
-## 运行要求
+## Requirements
 
 - Windows
-- Windows PowerShell 5.1 或更高版本
-- 从源码运行需要 .NET 8 SDK
-- 使用发布后的单文件版本不需要目标机器预装 .NET
-- 目标 CLI 命令需要加入 `PATH`，或者在设置中填写完整可执行文件路径
+- Windows PowerShell 5.1 or newer
+- .NET 8 SDK for building from source
+- Target CLI commands available in `PATH`, or configured with full executable paths
+- Windows Terminal if `wt` is selected as preferred terminal
 
-## 构建
+The published self-contained executable does not require installing the .NET runtime on the target machine.
+
+## Build
 
 ```powershell
 dotnet build .\AITerminalLauncher.sln
 ```
 
-## 测试
+## Test
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tests\run-tests.ps1
 ```
 
-测试覆盖：
+The test script covers:
 
-- 配置读写和验证
-- 快捷键冲突检测
-- 启动命令生成
-- 资源管理器目标路径解析
-- 右键菜单脚本 dry-run
-- UI 源码回归检查
+- PowerShell backend behavior
+- config loading and validation
+- launch command generation
+- hotkey conflict detection
+- Explorer target resolution
+- context menu dry-run behavior
+- UI source regression checks
 
-## 发布
+## Publish
 
-生成 Windows x64 自包含单文件程序：
+Publish a self-contained Windows x64 package:
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\publish.ps1
 ```
 
-发布产物位于：
+Output:
 
 ```text
 dist\AITerminalLauncher\
 ```
 
-主要文件：
+The published folder contains:
 
 - `AITerminalLauncher.App.exe`
 - `launcher.ps1`
@@ -85,113 +93,116 @@ dist\AITerminalLauncher\
 - `uninstall.ps1`
 - `src\AITerminalLauncher.psm1`
 
-这些文件需要保持同一目录布局一起分发。
+Keep this folder layout intact when distributing the app.
 
-## 使用
+To publish for another runtime:
 
-启动设置窗口：
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\publish.ps1 -Runtime win-arm64
+```
+
+## Run
+
+Open the settings window:
 
 ```powershell
 .\dist\AITerminalLauncher\AITerminalLauncher.App.exe
 ```
 
-只启动托盘：
+Start silently in tray mode:
 
 ```powershell
 .\dist\AITerminalLauncher\AITerminalLauncher.App.exe --tray
 ```
 
-常用入口：
+During development:
 
-- 双击托盘图标打开设置。
-- 右键托盘图标打开菜单。
-- 在设置中添加、编辑、启用或停用工具。
-- 在设置中为每个工具配置快捷键。
+```powershell
+dotnet run --project .\src\AITerminalLauncher.App\AITerminalLauncher.App.csproj
+```
 
-## 配置文件
+## Configuration
 
-用户配置保存位置：
+User config path:
 
 ```text
 %LocalAppData%\AITerminalLauncher\config.json
 ```
 
-仓库根目录的 `config.json` 是默认配置模板。
+The repository-level `config.json` is the default template.
 
-## 快捷键
+## Hotkeys
 
-快捷键编辑方式：
+Each enabled tool can have one global hotkey.
 
-1. 打开设置。
-2. 选择工具并点击编辑。
-3. 启用快捷键。
-4. 点击“按键输入”控件。
-5. 直接按下目标键或组合键。
-
-支持的按键包括：
+Supported keys include:
 
 - `A-Z`
 - `0-9`
 - `F1-F24`
 - `NUMPAD0-NUMPAD9`
-- 方向键
-- `Home` / `End`
-- `PageUp` / `PageDown`
-- `Insert` / `Delete`
-- `Space` / `Tab` / `Esc` / `Enter` / `Backspace`
-- 常用符号键
+- arrow keys
+- `Home`, `End`
+- `PageUp`, `PageDown`
+- `Insert`, `Delete`
+- `Space`, `Tab`, `Esc`, `Enter`, `Backspace`
+- common symbol keys
 
-## 资源管理器右键菜单
+When editing a tool, click the key input field and press the desired key or combination. For example, pressing `Ctrl+C` captures `C` and checks the `Ctrl` modifier.
 
-安装右键菜单：
+## Explorer Context Menu
+
+Install context menu entries:
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\install.ps1 -ConfigPath "$env:LOCALAPPDATA\AITerminalLauncher\config.json"
 ```
 
-预览将写入的注册表操作：
+Preview registry changes:
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\install.ps1 -ConfigPath "$env:LOCALAPPDATA\AITerminalLauncher\config.json" -DryRun
 ```
 
-移除右键菜单：
+Remove context menu entries:
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\uninstall.ps1 -ConfigPath "$env:LOCALAPPDATA\AITerminalLauncher\config.json"
 ```
 
-托盘菜单中也提供“安装右键菜单”和“移除右键菜单”。
+The tray menu also exposes install/remove context menu commands.
 
-## 日志
+## Logs
 
-日志目录：
+Logs are written to:
 
 ```text
 %LocalAppData%\AITerminalLauncher\logs\
 ```
 
-如果遇到启动失败、快捷键注册失败、工具启动失败，优先查看这里。
+Check this folder when startup, hotkey registration, or tool launch fails.
 
-## 常见问题
+## Troubleshooting
 
-### 快捷键不能注册
+### Hotkey registration fails
 
-可能被其他程序占用。修改快捷键后保存设置，或者查看日志确认具体失败项。
+Another program may already own the key combination. Change the hotkey in settings and save again.
 
-### 按快捷键时目录不对
+### Wrong folder is launched
 
-程序优先读取当前前台资源管理器窗口：
+The target folder priority is:
 
-1. 如果选中了文件夹，使用选中文件夹。
-2. 如果选中了文件，使用当前资源管理器目录。
-3. 如果当前前台不是资源管理器，短时间内会复用上一次目录，方便连续按多个快捷键。
-4. 如果没有可用目录，会弹出文件夹选择器。
+1. selected folder in the active Explorer window;
+2. current folder in the active Explorer window;
+3. briefly reused previous launch folder for consecutive hotkey launches;
+4. folder picker fallback.
 
-### CLI 命令找不到
+If Explorer is not the foreground window and the recent reuse window has expired, the app will not keep using an old folder forever.
 
-检查命令是否在 `PATH` 中，或者在设置里填写完整可执行文件路径。
+### CLI command is not found
 
-### Windows Terminal 不可用
+Add the command to `PATH`, or configure the tool with a full executable path.
 
-在设置里把首选终端改成 `powershell`，或者安装 Windows Terminal 后继续使用 `wt`。
+### Windows Terminal is unavailable
+
+Change the preferred terminal to `powershell`, or install Windows Terminal and keep using `wt`.
