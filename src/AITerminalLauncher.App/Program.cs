@@ -8,6 +8,8 @@ namespace AITerminalLauncher.App;
 
 internal static class Program
 {
+    private const string SingleInstanceMutexName = @"Global\AITerminalLauncher.App.SingleInstance";
+
     [STAThread]
     private static void Main()
     {
@@ -15,6 +17,13 @@ internal static class Program
 
         try
         {
+            using var singleInstanceMutex = new Mutex(initiallyOwned: true, SingleInstanceMutexName, out var createdNew);
+            if (!createdNew)
+            {
+                SingleInstanceMessageWindow.RequestShowSettings();
+                return;
+            }
+
             var mode = StartupModeResolver.Resolve(Environment.GetCommandLineArgs().Skip(1));
             Application.Run(new LauncherApplicationContext(openSettingsOnStartup: mode == StartupMode.ShowSettings));
         }

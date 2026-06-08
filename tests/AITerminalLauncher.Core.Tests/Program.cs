@@ -25,6 +25,7 @@ VerifyConfigStoreSaveAndLoad(expectedTools);
 VerifyLoadOrCreateUserConfig(expectedTools);
 VerifyPowerShellLaunchRequestBuilder();
 VerifyExplorerTargetResolver();
+VerifyExplorerHotkeyLaunchPolicy();
 VerifyTrayMenuBuilderAndHotkeyConflicts();
 VerifyCustomToolAddition();
 VerifyLaunchServiceUsesFallbackTargetPath();
@@ -262,6 +263,14 @@ static void VerifyExplorerTargetResolver()
 
     AssertEx.Equal(@"C:\Repo", ExplorerTargetResolver.Resolve(currentFolderOnlySnapshot), "current folder is fallback when no folder is selected");
     AssertEx.Equal<string?>(null, ExplorerTargetResolver.Resolve(null), "missing explorer context returns null");
+}
+
+static void VerifyExplorerHotkeyLaunchPolicy()
+{
+    var snapshot = new ExplorerWindowSnapshot(CurrentFolder: @"C:\Repo", SelectedItems: []);
+
+    AssertEx.True(ExplorerHotkeyLaunchPolicy.ShouldLaunch(snapshot), "hotkey launches when Explorer is foreground");
+    AssertEx.True(!ExplorerHotkeyLaunchPolicy.ShouldLaunch(null), "hotkey ignores non-Explorer foreground windows");
 }
 
 static void VerifyTrayMenuBuilderAndHotkeyConflicts()

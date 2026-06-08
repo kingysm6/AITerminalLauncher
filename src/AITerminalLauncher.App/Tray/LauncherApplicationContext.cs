@@ -5,6 +5,7 @@ using AITerminalLauncher.App.Forms;
 using AITerminalLauncher.App.Hotkeys;
 using AITerminalLauncher.App.Services;
 using AITerminalLauncher.Core.Config;
+using AITerminalLauncher.Core.Explorer;
 using AITerminalLauncher.Core.Tray;
 
 namespace AITerminalLauncher.App.Tray;
@@ -20,11 +21,15 @@ public sealed class LauncherApplicationContext : ApplicationContext
     private readonly ContextMenuScriptService _contextMenuScriptService;
     private readonly RunAtLoginService _runAtLoginService;
     private readonly Icon _trayIcon;
+    private readonly System.Windows.Forms.Timer _foregroundPollTimer;
+    private readonly SingleInstanceMessageWindow _singleInstanceMessageWindow;
     private AppConfig _config;
     private ContextMenuStrip _contextMenu;
     private readonly NotifyIcon _notifyIcon;
     private string? _lastLaunchTargetPath;
     private DateTimeOffset _lastLaunchTargetCapturedAt;
+    private bool _hotkeysRegistered;
+    private bool _hotkeyRegistrationPaused;
 
     public LauncherApplicationContext(bool openSettingsOnStartup = false)
     {
@@ -34,6 +39,7 @@ public sealed class LauncherApplicationContext : ApplicationContext
         _globalHotkeyService = new GlobalHotkeyService();
         _contextMenuScriptService = new ContextMenuScriptService();
         _runAtLoginService = new RunAtLoginService();
+        _singleInstanceMessageWindow = new SingleInstanceMessageWindow();
         _config = _launchService.LoadConfig();
         _contextMenu = BuildContextMenu();
         _trayIcon = TrayIconProvider.GetTrayIcon();
@@ -46,9 +52,16 @@ public sealed class LauncherApplicationContext : ApplicationContext
         };
 
         _notifyIcon.DoubleClick += (_, _) => OpenSettings();
+        _singleInstanceMessageWindow.ShowSettingsRequested += (_, _) => OpenSettings();
 
         _globalHotkeyService.HotkeyPressed += OnHotkeyPressed;
-        TryRegisterHotkeys(showWarning: true);
+        _foregroundPollTimer = new System.Windows.Forms.Timer
+        {
+            Interval = 250,
+        };
+        _foregroundPollTimer.Tick += (_, _) => RefreshHotkeyRegistrationForForeground(showWarning: false);
+        RefreshHotkeyRegistrationForForeground(showWarning: true);
+        _foregroundPollTimer.Start();
 
         if (openSettingsOnStartup)
         {
@@ -58,6 +71,9 @@ public sealed class LauncherApplicationContext : ApplicationContext
 
     protected override void ExitThreadCore()
     {
+        _foregroundPollTimer.Stop();
+        _foregroundPollTimer.Dispose();
+        _singleInstanceMessageWindow.Dispose();
         _globalHotkeyService.HotkeyPressed -= OnHotkeyPressed;
         _globalHotkeyService.Dispose();
         _notifyIcon.Visible = false;
@@ -136,14 +152,42 @@ public sealed class LauncherApplicationContext : ApplicationContext
         var entry = TrayMenuBuilder.BuildLaunchEntries(_config.Tools)
             .FirstOrDefault(entry => string.Equals(entry.ToolId, toolId, StringComparison.OrdinalIgnoreCase));
 
-        LaunchTool(toolId, entry?.DisplayName ?? toolId, "通过快捷键启动工具");
+        LaunchToolFromHotkey(toolId, entry?.DisplayName ?? toolId);
     }
 
-    private void LaunchTool(string toolId, string displayName, string source)
+    private void LaunchToolFromHotkey(string toolId, string displayName)
     {
         try
         {
             var snapshot = _explorerWindowProvider.GetActiveSnapshot();
+            if (!ExplorerHotkeyLaunchPolicy.ShouldLaunch(snapshot))
+            {
+                AppLogger.LogInfo($"忽略快捷键启动工具“{toolId}”：当前前台窗口不是资源管理器。");
+                return;
+            }
+
+            LaunchTool(toolId, displayName, "通过快捷键启动工具", snapshot);
+        }
+        catch (Exception ex)
+        {
+            AppLogger.LogError($"通过快捷键启动工具“{displayName}”失败。", ex);
+            MessageBox.Show(
+                ex.Message,
+                $"启动 {displayName}",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Error);
+        }
+    }
+
+    private void LaunchTool(
+        string toolId,
+        string displayName,
+        string source,
+        ExplorerWindowSnapshot? snapshot = null)
+    {
+        try
+        {
+            snapshot ??= _explorerWindowProvider.GetActiveSnapshot();
             var fallbackTargetPath = GetRecentLaunchTargetPath();
             var targetPath = _launchService.ResolveTargetPath(snapshot, fallbackTargetPath);
             if (string.IsNullOrWhiteSpace(targetPath))
@@ -188,26 +232,45 @@ public sealed class LauncherApplicationContext : ApplicationContext
 
     private void OpenSettings()
     {
-        using var form = new SettingsForm(_config);
-        if (form.ShowDialog() != DialogResult.OK || form.SavedConfig is null)
-        {
-            return;
-        }
+        _hotkeyRegistrationPaused = true;
+        _globalHotkeyService.UnregisterAll();
+        _hotkeysRegistered = false;
+        var restoreHotkeys = true;
 
         try
         {
-            _configStore.SaveToPath(ConfigPathResolver.GetUserConfigPath(), form.SavedConfig);
-            _runAtLoginService.SetEnabled(form.SavedConfig.Startup.LaunchAtLogin);
-            RefreshRuntimeState();
+            using var form = new SettingsForm(_config);
+            if (form.ShowDialog() != DialogResult.OK || form.SavedConfig is null)
+            {
+                return;
+            }
+
+            try
+            {
+                _configStore.SaveToPath(ConfigPathResolver.GetUserConfigPath(), form.SavedConfig);
+                _runAtLoginService.SetEnabled(form.SavedConfig.Startup.LaunchAtLogin);
+                _hotkeyRegistrationPaused = false;
+                RefreshRuntimeState();
+                restoreHotkeys = false;
+            }
+            catch (Exception ex)
+            {
+                AppLogger.LogError("从托盘保存设置失败。", ex);
+                MessageBox.Show(
+                    ex.Message,
+                    "保存设置",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
+            }
         }
-        catch (Exception ex)
+
+        finally
         {
-            AppLogger.LogError("从托盘保存设置失败。", ex);
-            MessageBox.Show(
-                ex.Message,
-                "保存设置",
-                MessageBoxButtons.OK,
-                MessageBoxIcon.Error);
+            if (restoreHotkeys)
+            {
+                _hotkeyRegistrationPaused = false;
+                RefreshHotkeyRegistrationForForeground(showWarning: true);
+            }
         }
     }
 
@@ -261,7 +324,13 @@ public sealed class LauncherApplicationContext : ApplicationContext
     {
         _config = _launchService.LoadConfig();
 
-        TryRegisterHotkeys(showWarning: true);
+        if (_hotkeysRegistered)
+        {
+            _globalHotkeyService.UnregisterAll();
+            _hotkeysRegistered = false;
+        }
+
+        RefreshHotkeyRegistrationForForeground(showWarning: true);
 
         var previousMenu = _contextMenu;
         _contextMenu = BuildContextMenu();
@@ -269,11 +338,39 @@ public sealed class LauncherApplicationContext : ApplicationContext
         previousMenu.Dispose();
     }
 
+    private void RefreshHotkeyRegistrationForForeground(bool showWarning)
+    {
+        if (_hotkeyRegistrationPaused)
+        {
+            return;
+        }
+
+        var foregroundExplorerSnapshot = _explorerWindowProvider.GetActiveSnapshot();
+        if (!ExplorerHotkeyLaunchPolicy.ShouldLaunch(foregroundExplorerSnapshot))
+        {
+            if (_hotkeysRegistered)
+            {
+                _globalHotkeyService.UnregisterAll();
+                _hotkeysRegistered = false;
+            }
+
+            return;
+        }
+
+        if (_hotkeysRegistered)
+        {
+            return;
+        }
+
+        TryRegisterHotkeys(showWarning);
+    }
+
     private void TryRegisterHotkeys(bool showWarning)
     {
         try
         {
             _globalHotkeyService.RegisterToolHotkeys(_config.Tools);
+            _hotkeysRegistered = true;
         }
         catch (Exception ex)
         {

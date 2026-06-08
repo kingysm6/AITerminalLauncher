@@ -48,6 +48,7 @@ public sealed class GlobalHotkeyService : IDisposable
             if (!RegisterHotKey(_messageWindow.Handle, registrationId, (uint)ToNativeModifiers(chord.Modifiers), (uint)ToVirtualKey(chord.Key)))
             {
                 AppLogger.LogInfo($"Global hotkey registration failed for tool '{tool.DisplayName}' and chord '{chord.Signature}'.");
+                UnregisterAll();
                 throw new InvalidOperationException(
                     $"Failed to register hotkey '{chord.Signature}' for tool '{tool.DisplayName}'.");
             }

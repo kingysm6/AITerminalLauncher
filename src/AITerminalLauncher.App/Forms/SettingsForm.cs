@@ -327,22 +327,23 @@ public sealed class SettingsForm : Form
         {
             FillColor = selected ? UiTheme.SelectionBack : UiTheme.Surface,
             BorderColor = selected ? UiTheme.Accent : UiTheme.Border,
-            Radius = 22,
-            Height = 92,
+            Radius = 16,
+            Height = 68,
             Width = GetToolCardWidth(),
-            Margin = new Padding(0, 0, 8, 10),
-            Padding = new Padding(16, 12, 16, 12),
+            Margin = new Padding(0, 0, 8, 7),
+            Padding = new Padding(14, 8, 14, 8),
             Tag = tool.Id,
             Cursor = Cursors.Hand,
         };
 
-        var nameLabel = CreateCardLabel(tool.DisplayName, UiTheme.TitleFont, UiTheme.TextPrimary, new Point(16, 12));
-        var idLabel = CreateCardLabel($"ID  {tool.Id}", UiTheme.SubtitleFont, UiTheme.TextSecondary, new Point(18, 42));
-        var commandLabel = CreateCardLabel($"命令  {tool.Command}", UiTheme.SubtitleFont, UiTheme.TextSecondary, new Point(18, 64));
-        var hotkeyPill = CreateStatusPill(FormatHotkey(tool), selected ? UiTheme.Accent : UiTheme.SelectionBack, selected ? UiTheme.AccentText : UiTheme.Accent, new Point(360, 14), 138);
-        var enabledPill = CreateStatusPill(tool.Enabled ? "启用" : "停用", tool.Enabled ? UiTheme.SelectionBack : UiTheme.HoverBack, tool.Enabled ? UiTheme.Accent : UiTheme.TextSecondary, new Point(520, 14), 70);
-        var trayPill = CreateStatusPill(tool.ShowInTrayMenu ? "托盘" : "无托盘", UiTheme.HoverBack, tool.ShowInTrayMenu ? UiTheme.TextPrimary : UiTheme.TextSecondary, new Point(600, 14), 80);
-        var menuPill = CreateStatusPill(tool.ShowInContextMenu ? "右键" : "无右键", UiTheme.HoverBack, tool.ShowInContextMenu ? UiTheme.TextPrimary : UiTheme.TextSecondary, new Point(690, 14), 80);
+        var nameLabel = CreateCardLabel(tool.DisplayName, UiTheme.BaseFont, UiTheme.TextPrimary, new Point(16, 8));
+        nameLabel.Font = new Font(UiTheme.BaseFont, FontStyle.Bold);
+        var idLabel = CreateCardLabel($"ID  {tool.Id}", UiTheme.SubtitleFont, UiTheme.TextSecondary, new Point(18, 31));
+        var commandLabel = CreateCardLabel($"命令  {tool.Command}", UiTheme.SubtitleFont, UiTheme.TextSecondary, new Point(18, 49));
+        var hotkeyPill = CreateStatusPill(FormatHotkey(tool), selected ? UiTheme.Accent : UiTheme.SelectionBack, selected ? UiTheme.AccentText : UiTheme.Accent, new Point(360, 10), 138);
+        var enabledPill = CreateStatusPill(tool.Enabled ? "启用" : "停用", tool.Enabled ? UiTheme.SelectionBack : UiTheme.HoverBack, tool.Enabled ? UiTheme.Accent : UiTheme.TextSecondary, new Point(520, 10), 70);
+        var trayPill = CreateStatusPill(tool.ShowInTrayMenu ? "托盘" : "无托盘", UiTheme.HoverBack, tool.ShowInTrayMenu ? UiTheme.TextPrimary : UiTheme.TextSecondary, new Point(600, 10), 80);
+        var menuPill = CreateStatusPill(tool.ShowInContextMenu ? "右键" : "无右键", UiTheme.HoverBack, tool.ShowInContextMenu ? UiTheme.TextPrimary : UiTheme.TextSecondary, new Point(690, 10), 80);
 
         card.Controls.Add(nameLabel);
         card.Controls.Add(idLabel);
@@ -377,9 +378,9 @@ public sealed class SettingsForm : Form
             ForeColor = textColor,
             FillColor = fillColor,
             BorderColor = Color.Transparent,
-            Radius = 14,
+            Radius = 11,
             Width = width,
-            Height = 28,
+            Height = 22,
             Location = location,
             BackColor = Color.Transparent,
         };

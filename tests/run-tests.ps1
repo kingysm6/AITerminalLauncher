@@ -503,6 +503,9 @@ if ($settingsFormSource -notmatch [regex]::Escape('UpdateToolCommandBarState()')
 if ($settingsFormSource -notmatch [regex]::Escape("BuildToolCard(")) {
     throw 'Assertion failed: settings form should render tools as rounded cards.'
 }
+if ($settingsFormSource -notmatch [regex]::Escape("Height = 68") -or $settingsFormSource -notmatch [regex]::Escape("Height = 22")) {
+    throw 'Assertion failed: settings tool cards should use compact row and pill heights.'
+}
 if ($settingsFormSource -match [regex]::Escape('ListView')) {
     throw 'Assertion failed: settings form should not use ListView for the main tool surface.'
 }
@@ -552,6 +555,22 @@ if ($trayContextSource -match [regex]::Escape("_notifyIcon.DoubleClick += static
 if ($trayContextSource -notmatch [regex]::Escape("RecentLaunchTargetReuseWindow") -or $trayContextSource -notmatch [regex]::Escape("GetRecentLaunchTargetPath()")) {
     throw 'Assertion failed: remembered launch target should only be reused briefly, not forever.'
 }
+if ($trayContextSource -notmatch [regex]::Escape("_foregroundPollTimer") -or $trayContextSource -notmatch [regex]::Escape("RefreshHotkeyRegistrationForForeground(")) {
+    throw 'Assertion failed: global hotkeys should be registered only while Explorer is the foreground window.'
+}
+if ($trayContextSource -match [regex]::Escape("TryRegisterHotkeys(showWarning: true);`r`n`r`n        if (openSettingsOnStartup)")) {
+    throw 'Assertion failed: tray startup should not register global hotkeys unconditionally.'
+}
+$openSettingsIndex = $trayContextSource.IndexOf('private void OpenSettings()', [System.StringComparison]::Ordinal)
+$settingsDialogIndex = $trayContextSource.IndexOf('form.ShowDialog()', $openSettingsIndex, [System.StringComparison]::Ordinal)
+$pauseHotkeysIndex = $trayContextSource.IndexOf('_globalHotkeyService.UnregisterAll();', $openSettingsIndex, [System.StringComparison]::Ordinal)
+$resumeHotkeysIndex = $trayContextSource.IndexOf('RefreshHotkeyRegistrationForForeground(showWarning: true);', $settingsDialogIndex, [System.StringComparison]::Ordinal)
+if ($openSettingsIndex -lt 0 -or $settingsDialogIndex -lt 0 -or $pauseHotkeysIndex -lt 0 -or $pauseHotkeysIndex -gt $settingsDialogIndex) {
+    throw 'Assertion failed: settings dialog should unregister global hotkeys before showing hotkey capture controls.'
+}
+if ($resumeHotkeysIndex -lt 0) {
+    throw 'Assertion failed: settings dialog should restore global hotkeys after closing.'
+}
 
 $globalHotkeySource = Get-Content (Join-Path $repoRoot 'src\AITerminalLauncher.App\Hotkeys\GlobalHotkeyService.cs') -Raw -Encoding UTF8
 $duplicateCheckIndex = $globalHotkeySource.IndexOf('var duplicates = HotkeyConflictDetector.FindDuplicates(toolList);', [System.StringComparison]::Ordinal)
@@ -574,6 +593,13 @@ if ($uninstallScriptSource -notmatch [regex]::Escape("Get-AITLText -Key 'Context
 }
 
 $appProjectSource = Get-Content (Join-Path $repoRoot 'src\AITerminalLauncher.App\AITerminalLauncher.App.csproj') -Raw -Encoding UTF8
+$programSource = Get-Content (Join-Path $repoRoot 'src\AITerminalLauncher.App\Program.cs') -Raw -Encoding UTF8
+if ($programSource -notmatch [regex]::Escape('Global\AITerminalLauncher.App.SingleInstance') -or $programSource -notmatch [regex]::Escape('createdNew')) {
+    throw 'Assertion failed: app startup should enforce a single tray instance with a named mutex.'
+}
+if ($programSource -notmatch [regex]::Escape('SingleInstanceMessageWindow.RequestShowSettings()')) {
+    throw 'Assertion failed: double-clicking a second app instance should ask the running tray app to show settings.'
+}
 if ($appProjectSource -notmatch [regex]::Escape('Include="..\..\launcher.ps1"')) {
     throw 'Assertion failed: app project publishes launcher.ps1.'
 }
